@@ -1,0 +1,31 @@
+# This app's own settings. Everything about the board - flash, PSRAM, cache, the
+# console, the LVGL build every project on this board shares - arrives from kbsp's
+# sdkconfig.board, which CMakeLists.txt fetches and reads first.
+
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="managed_components/kodediy__kbsp/partitions.csv"
+
+# The slot model's safety property: this firmware never writes otadata, so any
+# reset returns to kodeOS.
+CONFIG_KODEOS_BOOT_ROLE_APP=y
+
+# The console over the cable: kode install, kode ping, screenshot and
+# `kode send 'variable name="best_race"'` keep working while Kody races.
+CONFIG_KODEOS_CONSOLE=y
+
+# ...and on the magnetic dock's pads too (kode-camera, 2026-10-14): without it a
+# Dot on its charging base leaves the base's USB device unserved.
+CONFIG_KHAL_CONSOLE_DOCK=y
+CONFIG_TINYUSB_CDC_ENABLED=y
+
+# A game draws every frame: the renderer's inner loops want -O2.
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# No radio: the race never talks to the network, and the C5 link costs
+# internal RAM and a few milliseconds of every second.
+CONFIG_KODEOS_RADIO=n
+
+# Turning AO_Radio off is not enough to keep esp-hosted out (see
+# kode-app-template): a firmware that wants no radio says so out loud, and with
+# no radio there is no BLE host either.
+CONFIG_ESP_HOSTED_ENABLED=n
+CONFIG_BT_ENABLED=n

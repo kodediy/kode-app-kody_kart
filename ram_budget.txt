@@ -1,0 +1,73 @@
+# The budget of internal RAM for this app, read by the SDK's tools/check_ram.sh
+# (catalog rule B8):
+#
+#   <kode-sdk>/tools/check_ram.sh build/kody_kart.elf ram_budget.txt
+#
+# It starts from the SDK's tests/target/ram_budget.txt at the pinned release,
+# without the lines of what this app turns off (the radio, the network, BLE and
+# LVGL), and adds the app's own large statics at the end, each with its reason.
+#
+# static_max is the SDK's ceiling; an app never raises it.
+static_max 364000
+
+# Every data symbol of 2048 bytes or more in internal RAM, with the source
+# file that defines it and the most it may be. A static this size that is not
+# listed fails the check: a buffer belongs in PSRAM (khal_alloc_psram()), and
+# the ones below are here because something forces them to be internal.
+#
+# symbol               source file          max bytes
+
+# The stacks of the Active Objects (kqp_config.h's tiers). Internal because
+# an AO may write flash, which takes PSRAM out of reach while the write lasts.
+console_stack          kode.c               8192
+appmgr_stack           kode.c               8192
+storage_stack          kode.c               6144
+nfc_stack              kode.c               6144
+display_stack          kode.c               6144
+touch_stack            kode.c               4096
+power_stack            kode.c               4096
+log_stack              kode.c               4096
+ioexp_stack            kode.c               4096
+imu_stack              kode.c               4096
+boot_stack             kode.c               4096
+autotest_stack         kode.c               4096
+rfid_stack             kode.c               3072
+ledmgr_stack           kode.c               3072
+ir_stack               kode.c               3072
+haptic_stack           kode.c               3072
+buttons_stack          kode.c               3072
+audio_stack            kode.c               3072
+
+# The AO supervisor's stack (CONFIG_KQP_AO_WATCH). Internal because it has to
+# run while a flash write has taken PSRAM out of reach.
+s_watch_stack          khal_system_esp.c    3072
+
+# QP/C's three event pools.
+s_jumbo_pool           kqp.c                16560
+s_medium_pool          kqp.c                16128
+s_large_pool           kqp.c                16128
+
+# The console's Active Object. It grows with the verbs, so the line leaves
+# room.
+l_console              console_ao.c         4096
+
+# The SDK's own buffers and tables.
+s_recv_buf             appmgr_ao.c          4096
+s_adopt_buf            appmgr_ao.c          4096
+s_fs_buf               kode.c               4096
+
+# What the libraries declare. Listed so that a version bump that grows one
+# of them is seen.
+xIsrStack              port.c               4192
+s_retention            sleep_retention.c    2816
+gNfcDev                rfal_nfc.c           2560
+
+# The app's own.
+# The race's Active Object: its task's stack (internal, as a task's stack
+# always is) and the object itself, which its handlers touch while a save to
+# NVS has taken PSRAM out of reach.
+l_stack                kart_ao.c            8192
+l_ao                   kart_ao.c            4096
+# The minimap, 64 x 64 cells: built once per circuit and read for every cell
+# of the HUD every frame. hud.c is pure C (host-tested), with no allocator.
+s_map                  hud.c                4096
