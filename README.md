@@ -70,7 +70,7 @@ podiums) and ghosts are saved with the SDK (`khal_nvs`, namespace `kodykart`).
 ## Build and install
 
 ESP-IDF **v6.1** and an SSH key that can read `kodediy/kode-sdk` (the first
-build fetches the SDK, pinned at `v00.00.27` in `main/idf_component.yml`).
+build fetches the SDK, pinned at `v0.1.1` in `main/idf_component.yml`).
 
 ```bash
 export PATH="$HOME/.local/idf-python/bin:$PATH"

@@ -19,6 +19,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "kaos.h"
 #include "kdrv_buttons.h"
 #include "kdrv_display.h"
 
@@ -136,7 +137,7 @@ static void upscale(const uint16_t *src, uint16_t *dst)
  */
 static kart_input_t read_input(KartAo * const me)
 {
-    const uint32_t b = kode_buttons_read();
+    const uint32_t b = kode_sys_button_read_mask();
     kart_input_t in = { 0 };
     if ( b & (1u << KDRV_BTN_LEFT) ) in.steer -= 1.0f;
     if ( b & (1u << KDRV_BTN_RIGHT) ) in.steer += 1.0f;
@@ -304,7 +305,7 @@ static void sounds(KartAo * const me)
 
 /* ---- what the player feels and sees on the LED ---------------------------- */
 
-static void buzz(uint16_t ms, uint8_t gain) { (void)kode_haptic_play(ms, gain); }
+static void buzz(uint16_t ms, uint8_t gain) { (void)kode_sys_haptic_play_buzz(ms, gain); }
 
 static void feel(KartAo * const me, uint32_t now)
 {
@@ -371,7 +372,7 @@ static void led(KartAo * const me, uint32_t now)
 {
     const uint32_t c = led_colour(me, now);
     if ( c == me->led_rgb ) return;
-    if ( KODE_OK == kode_led_rgb((uint8_t)(c >> 16), (uint8_t)(c >> 8), (uint8_t)c) ) me->led_rgb = c;
+    if ( KODE_OK == kode_sys_led_set_rgb((uint8_t)(c >> 16), (uint8_t)(c >> 8), (uint8_t)c) ) me->led_rgb = c;
 }
 
 /** @brief In a time trial, where the circuit's record ghost is now (if it was set at this engine). */
@@ -535,14 +536,23 @@ static void flip(KartAo * const me)
     me->in_flight = true;
 }
 
-/** @brief BOT held past HOME_HOLD_MS: home to kodeOS. Checked every frame. */
-static void home_check(KartAo * const me, uint32_t now)
+/**
+ * @brief BOT held past HOME_HOLD_MS: home to kodeOS. Checked every frame.
+ * @return true once AO_Boot took the request; it resets the board a moment later.
+ */
+static bool home_check(KartAo * const me, uint32_t now)
 {
+    bool leaving = false;
     if ( me->bot_down_ms && (HOME_HOLD_MS <= now - me->bot_down_ms) )
     {
-        KLOG_I(TAG, "going home");
-        kode_exit_to_os();
+        /* Refused while AO_Boot's queue is full: asked again on the next frame. */
+        if ( KODE_OK == kode_sys_exit_to_os() )
+        {
+            KLOG_I(TAG, "going home");
+            leaving = true;
+        }
     }
+    return leaving;
 }
 
 /* ---- the screens ------------------------------------------------------------ */
@@ -716,8 +726,12 @@ static void snapshot(const KartAo * const me)
 static void frame(KartAo * const me)
 {
     const int64_t t0 = esp_timer_get_time();
-    home_check(me, kode_time_ms());
-    const uint32_t t_ms = kode_time_ms();
+    if ( home_check(me, kode_sys_time_ms()) )
+    {
+        /* No next frame: the race stops here until the reset. */
+        return;
+    }
+    const uint32_t t_ms = kode_sys_time_ms();
     step(me, t_ms);
     race_flow(me, t_ms);
     rd_camera_t cam;
@@ -772,16 +786,16 @@ static void frame(KartAo * const me)
     {
         led(me, t_ms);
     }
-    else if ( (0 != me->led_rgb) && (KODE_OK == kode_led_rgb(0, 0, 0)) )
+    else if ( (0 != me->led_rgb) && (KODE_OK == kode_sys_led_set_rgb(0, 0, 0)) )
     {
         me->led_rgb = 0;
     }
     me->race_ev = me->kart_ev = me->item_ev = 0;
-    sound_step(kode_time_ms());
+    sound_step(kode_sys_time_ms());
     snapshot(me);
     me->busy_us += (uint32_t)(esp_timer_get_time() - t0);
     flip(me);
-    const uint32_t now = kode_time_ms();
+    const uint32_t now = kode_sys_time_ms();
     me->fps_n++;
     if ( FPS_EVERY_MS <= now - me->fps_t0 )
     {
@@ -860,7 +874,8 @@ static QState KartAo_initial(KartAo * const me, void const * const par)
     }
     QActive_subscribe(&me->super, BUTTON_EVT_SIG);
     QActive_subscribe(&me->super, DISPLAY_STATE_SIG);
-    QActive_subscribe(&me->super, TOUCH_EVT_SIG);
+    /* This subscription also starts AO_Touch; a bare one to TOUCH_EVT_SIG would not. */
+    (void)kode_sys_touch_subscribe(&me->super);
     /* The panel was announced from inside kode_init(), before this AO existed. */
     display_state_request();
     return Q_TRAN(&KartAo_waiting);
@@ -873,7 +888,7 @@ static QState KartAo_running(KartAo * const me, QEvt const * const e)
     {
     case BUTTON_EVT_SIG: {
         ButtonEvt const * const be = (ButtonEvt const *)e;
-        const uint32_t now = kode_time_ms();
+        const uint32_t now = kode_sys_time_ms();
         if ( (uint8_t)KDRV_BTN_BOT == be->id )
         {
             /* BOT acts on its release, so a hold can mean home instead. */
@@ -938,7 +953,7 @@ static QState KartAo_racing(KartAo * const me, QEvt const * const e)
     switch ( e->sig )
     {
     case Q_ENTRY_SIG:
-        me->fps_t0 = me->last_ms = kode_time_ms();
+        me->fps_t0 = me->last_ms = kode_sys_time_ms();
         QACTIVE_POST(&me->super, &FRAME_EVT, &me->super);
         return Q_HANDLED();
     case KART_FRAME_SIG:

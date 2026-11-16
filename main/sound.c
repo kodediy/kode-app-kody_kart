@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file sound.c
- * @brief The note queue over kode_audio_tone().
+ * @brief The note queue over kode_sys_audio_tone().
  */
 #include "sound.h"
 
-#include "kode.h"
+#include "kode_sys.h"
 
 #define MAX_NOTES 12
 #define VOLUME    40
@@ -41,7 +41,7 @@ void sound_step(uint32_t now_ms)
     if ( s_due ) s_retry_until = now_ms + RETRY_MS;
     s_due = false;
     /* The codec closes a moment after a tone and refuses the next meanwhile: try again next frame. */
-    if ( s_q[s_i].hz && (KODE_OK != kode_audio_tone(s_q[s_i].hz, s_q[s_i].ms, VOLUME)) &&
+    if ( s_q[s_i].hz && (KODE_OK != kode_sys_audio_tone(s_q[s_i].hz, s_q[s_i].ms, VOLUME)) &&
         (0 > (int32_t)(now_ms - s_retry_until)) )
     {
         s_at = now_ms;

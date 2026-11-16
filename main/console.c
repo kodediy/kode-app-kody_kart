@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 
-#include "kode.h"
+#include "kode_sys.h"
 
 #include "game.h"
 #include "kart_ao.h"

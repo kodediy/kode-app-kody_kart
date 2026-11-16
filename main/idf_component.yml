@@ -1,10 +1,11 @@
 ## One pin, and everything below the facade arrives at the same commit without
-## being named: kaos, kqp, khal, kdrv, klog, kbsp and the vendored QP/C. The
-## race draws its own frames, so there is no kscreen (no kui, no LVGL).
+## being named: kode_sys, kaos, kqp, khal, kdrv, klog, kbsp, kdefs and the
+## vendored QP/C. The race draws its own frames, so there is no kscreen (no
+## kui, no LVGL).
 ##
-## SSH, not HTTPS: the SDK is private.
+## SSH, the form the catalog's rule B1 asks for.
 dependencies:
   kodediy/kode:
     git: git@github.com:kodediy/kode-sdk.git
     path: components/kode
-    version: v00.00.27
+    version: v0.1.1

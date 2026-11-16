@@ -3,7 +3,7 @@
  * @file sound.h
  * @brief The race's sounds: one tone at a time, tunes queued note by note.
  *
- * kode_audio_tone() refuses while the codec is busy, so a tune is a queue the
+ * kode_sys_audio_tone() refuses while the codec is busy, so a tune is a queue the
  * frame steps through (kodegotchi's way). A new sound replaces the queue only
  * if it matters at least as much as what is playing.
  */

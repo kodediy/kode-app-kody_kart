@@ -9,7 +9,7 @@
  *
  * Any reset returns to kodeOS (CONFIG_KODEOS_BOOT_ROLE_APP).
  */
-#include "kode_ao.h"
+#include "kode_sys.h"
 
 #include "console.h"
 #include "kart_ao.h"
